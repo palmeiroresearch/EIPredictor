@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación EIP - Estadios Avanzados</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8b4789">
+    <meta name="description" content="Escala predictiva validada para estadios avanzados en Enfermedad Inflamatoria Pélvica. AUC-ROC: 0.93">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EIP Score">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #8b4789 0%, #c084b8 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8b4789 0%, #a05a9d 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgba(255,255,255,0.1);stop-opacity:1" /><stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:1" /></linearGradient></defs><g opacity="0.3"><ellipse cx="100" cy="100" rx="60" ry="40" fill="none" stroke="white" stroke-width="2"/><path d="M 40 100 Q 30 80, 20 60" stroke="white" stroke-width="2" fill="none"/><path d="M 160 100 Q 170 80, 180 60" stroke="white" stroke-width="2" fill="none"/><circle cx="20" cy="55" r="8" fill="white"/><circle cx="180" cy="55" r="8" fill="white"/><path d="M 100 140 L 100 170" stroke="white" stroke-width="2"/><path d="M 80 170 Q 100 180, 120 170" stroke="white" stroke-width="2" fill="none"/></g></svg>') center/contain no-repeat;
+            opacity: 0.15;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 30px 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #8b4789;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0e6ef;
+        }
+
+        .factor-group {
+            margin-bottom: 15px;
+        }
+
+        .factor-item {
+            background: #faf8fb;
+            border: 2px solid #e8dce7;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .factor-item:hover {
+            border-color: #c084b8;
+            background: #f5f0f4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 71, 137, 0.15);
+        }
+
+        .factor-item.selected {
+            background: linear-gradient(135deg, #f8f4f7 0%, #f0e6ef 100%);
+            border-color: #8b4789;
+            box-shadow: 0 4px 12px rgba(139, 71, 137, 0.2);
+        }
+
+        .factor-item input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .factor-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checkbox-custom {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #c084b8;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .factor-item.selected .checkbox-custom {
+            background: #8b4789;
+            border-color: #8b4789;
+        }
+
+        .checkbox-custom::after {
+            content: '✓';
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .factor-item.selected .checkbox-custom::after {
+            opacity: 1;
+        }
+
+        .factor-text {
+            flex: 1;
+        }
+
+        .factor-label {
+            font-weight: 600;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .factor-description {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .factor-points {
+            background: #8b4789;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            display: none;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        .result-score {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .score-number {
+            font-size: 48px;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .score-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .risk-category {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .risk-probability {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .risk-recommendation {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .recommendation-text {
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .result-low {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .result-low .score-number { color: #28a745; }
+
+        .result-moderate {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            color: #856404;
+        }
+
+        .result-moderate .score-number { color: #ff9800; }
+
+        .result-high {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .result-high .score-number { color: #dc3545; }
+
+        .validation-info {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+
+        .validation-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .validation-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #8b4789;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: #6c757d;
+            border-top: 2px solid #f0e6ef;
+        }
+
+        .footer-warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffc107;
+            text-align: left;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .result-score .score-number {
+                font-size: 40px;
+            }
+
+            .risk-category {
+                font-size: 20px;
+            }
+
+            .validation-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Evaluación de Estadios Avanzados en EIP</h1>
+            <p>Escala Predictiva Validada (AUC-ROC: 0.93)</p>
+        </div>
+
+        <div class="content">
+            <div class="section-title">📋 Factores de Riesgo</div>
+            
+            <div class="factor-group" id="factorsContainer">
+                <!-- Los factores se generarán dinámicamente -->
+            </div>
+
+            <div class="result-container" id="resultContainer">
+                <div class="result-score">
+                    <div class="score-number" id="scoreNumber">0</div>
+                    <div class="score-label">Puntos Totales</div>
+                </div>
+                <div class="risk-category" id="riskCategory"></div>
+                <div class="risk-probability" id="riskProbability"></div>
+                <div class="risk-recommendation">
+                    <div class="recommendation-title">
+                        <span id="recommendationIcon"></span>
+                        <span>Acción Clínica Recomendada:</span>
+                    </div>
+                    <div class="recommendation-text" id="recommendationText"></div>
+                </div>
+            </div>
+
+            <div class="validation-info">
+                <div class="validation-title">📊 Validación del Modelo</div>
+                <div class="validation-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">AUC-ROC</div>
+                        <div class="stat-value">0.93</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Sensibilidad</div>
+                        <div class="stat-value">91%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Especificidad</div>
+                        <div class="stat-value">89%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">IC 95%</div>
+                        <div class="stat-value">0.89-0.96</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-warning">
+                ⚠️ <strong>Nota Importante:</strong> Esta herramienta es de apoyo diagnóstico. El juicio clínico y la evaluación integral del paciente son indispensables para la toma de decisiones.
+            </div>
+            <div>Estudio validado en población cubana | Desarrollo académico</div>
+        </div>
+    </div>
+
+    <script>
+        const factors = [
+            {
+                id: 'us_complex',
+                label: 'Imagen compleja en US',
+                description: 'Hallazgo de absceso/hidrosálpinx',
+                points: 5
+            },
+            {
+                id: 'leucocytes',
+                label: 'Leucocitos >15.000/µL',
+                description: 'Recuento en ingreso',
+                points: 3
+            },
+            {
+                id: 'fever',
+                label: 'Fiebre ≥38.5°C',
+                description: 'Temperatura documentada al ingreso',
+                points: 3
+            },
+            {
+                id: 'vsg',
+                label: 'VSG >60 mm/h',
+                description: 'Valor en primera hora',
+                points: 3
+            },
+            {
+                id: 'age',
+                label: 'Edad ≤19 años',
+                description: 'Edad al diagnóstico',
+                points: 2
+            },
+            {
+                id: 'pain',
+                label: 'Dolor pélvico intenso',
+                description: 'Reportado en evaluación inicial',
+                points: 2
+            },
+            {
+                id: 'manipulation',
+                label: 'Manipulaciones uterinas recientes',
+                description: 'Legrados/inserción DIU últimos 3 meses',
+                points: 2
+            },
+            {
+                id: 'its',
+                label: 'ITS previas',
+                description: 'Historia de clamidia/gonorrea',
+                points: 1
+            },
+            {
+                id: 'tachycardia',
+                label: 'Frecuencia cardíaca >100 lpm',
+                description: 'Taquicardia en triaje',
+                points: 1
+            }
+        ];
+
+        // Estado de la aplicación
+        let selectedFactors = new Set();
+
+        // Generar factores dinámicamente
+        function renderFactors() {
+            const container = document.getElementById('factorsContainer');
+            container.innerHTML = factors.map(factor => `
+                <div class="factor-item" id="factor-${factor.id}" onclick="toggleFactor('${factor.id}')">
+                    <input type="checkbox" id="checkbox-${factor.id}">
+                    <div class="factor-content">
+                        <div class="checkbox-custom"></div>
+                        <div class="factor-text">
+                            <span class="factor-label">${factor.label}</span>
+                            <span class="factor-description">${factor.description}</span>
+                        </div>
+                        <div class="factor-points">${factor.points} pt${factor.points > 1 ? 's' : ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Toggle factor selection
+        function toggleFactor(factorId) {
+            const factorElement = document.getElementById(`factor-${factorId}`);
+            const checkbox = document.getElementById(`checkbox-${factorId}`);
+            
+            if (selectedFactors.has(factorId)) {
+                selectedFactors.delete(factorId);
+                factorElement.classList.remove('selected');
+                checkbox.checked = false;
+            } else {
+                selectedFactors.add(factorId);
+                factorElement.classList.add('selected');
+                checkbox.checked = true;
+            }
+            
+            calculateScore();
+        }
+
+        // Calcular puntaje y mostrar resultado
+        function calculateScore() {
+            let totalScore = 0;
+            
+            selectedFactors.forEach(factorId => {
+                const factor = factors.find(f => f.id === factorId);
+                if (factor) {
+                    totalScore += factor.points;
+                }
+            });
+
+            const resultContainer = document.getElementById('resultContainer');
+            const scoreNumber = document.getElementById('scoreNumber');
+            const riskCategory = document.getElementById('riskCategory');
+            const riskProbability = document.getElementById('riskProbability');
+            const recommendationIcon = document.getElementById('recommendationIcon');
+            const recommendationText = document.getElementById('recommendationText');
+
+            if (selectedFactors.size > 0) {
+                resultContainer.classList.add('show');
+                scoreNumber.textContent = totalScore;
+
+                // Determinar categoría de riesgo
+                if (totalScore <= 7) {
+                    resultContainer.className = 'result-container result-low show';
+                    riskCategory.textContent = '✅ Riesgo Bajo';
+                    riskProbability.textContent = 'Probabilidad de Estadio III/IV: 8-12%';
+                    recommendationIcon.textContent = '🏠';
+                    recommendationText.textContent = 'Alta temprana con seguimiento ambulatorio. Antibioticoterapia oral y control en 24-48 horas.';
+                } else if (totalScore <= 12) {
+                    resultContainer.className = 'result-container result-moderate show';
+                    riskCategory.textContent = '⚠️ Riesgo Moderado';
+                    riskProbability.textContent = 'Probabilidad de Estadio III/IV: 35-60%';
+                    recommendationIcon.textContent = '🏥';
+                    recommendationText.textContent = 'Hospitalización inmediata. Iniciar terapia antibiótica intravenosa de amplio espectro. Monitorización de respuesta clínica cada 24 horas.';
+                } else {
+                    resultContainer.className = 'result-container result-high show';
+                    riskCategory.textContent = '🚨 Riesgo Alto';
+                    riskProbability.textContent = 'Probabilidad de Estadio III/IV: 82-95%';
+                    recommendationIcon.textContent = '⚕️';
+                    recommendationText.textContent = 'URGENTE: Evaluación quirúrgica inmediata. Considerar laparoscopia/laparotomía. Monitorización en UCI. Antibióticos IV de amplio espectro.';
+                }
+            } else {
+                resultContainer.classList.remove('show');
+            }
+        }
+
+        // Inicializar la aplicación
+        window.addEventListener('DOMContentLoaded', () => {
+            renderFactors();
+        });
+
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado:', registration.scope);
+                        
+                        // Detectar actualizaciones
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Hay una nueva versión disponible
+                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => {
+                        console.error('❌ Error al registrar Service Worker:', err);
+                    });
+            });
+
+            // Actualizar cuando el SW tome control
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+
+        // Detectar si está instalada como PWA
+        window.addEventListener('DOMContentLoaded', () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+                              || window.navigator.standalone 
+                              || document.referrer.includes('android-app://');
+            
+            if (isStandalone) {
+                console.log('✅ App ejecutándose como PWA');
+            }
+        });
+    </script>
+</body>
+</html>
