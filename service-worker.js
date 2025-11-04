@@ -1,5 +1,5 @@
 // Service Worker para EIP App
-const CACHE_VERSION = 'eip-v1.0.0';
+const CACHE_VERSION = 'eip-v2.0.0';
 const CACHE_NAME = `eip-app-${CACHE_VERSION}`;
 
 // Archivos a cachear
