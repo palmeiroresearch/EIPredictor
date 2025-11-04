@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación EIP - Estadios Avanzados</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8b4789">
+    <meta name="description" content="Escala predictiva validada para estadios avanzados en Enfermedad Inflamatoria Pélvica. AUC-ROC: 0.93">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EIP Score">
+    
+    <!-- Apple Splash Screens (iOS) -->
+    <link rel="apple-touch-startup-image" href="icon-512.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <style>
+        /* Splash Screen / Loading Screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeOut 0.5s ease 1.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        .splash-icon {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            margin-bottom: 30px;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .splash-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+            text-align: center;
+            animation: slideUp 0.6s ease 0.3s backwards;
+        }
+
+        .splash-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 400;
+            text-align: center;
+            animation: slideUp 0.6s ease 0.5s backwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .splash-loader {
+            margin-top: 40px;
+            display: flex;
+            gap: 10px;
+            animation: slideUp 0.6s ease 0.7s backwards;
+        }
+
+        .loader-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+
+        .loader-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .loader-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loader-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Animación de entrada del contenido principal */
+        .app-content {
+            animation: fadeInContent 0.5s ease 1.8s backwards;
+        }
+
+        @keyframes fadeInContent {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-dark: #5a67d8;
+            --primary-light: #a18cd1;
+            --success: #48bb78;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .app-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Header mejorado */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 15px;
+            opacity: 0.95;
+            font-weight: 400;
+        }
+
+        /* Navegación por tabs */
+        .tabs {
+            display: flex;
+            background: var(--gray-50);
+            padding: 8px;
+            border-radius: 12px;
+            margin: 30px 30px 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            background: white;
+            color: var(--primary-dark);
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Alert boxes modernos */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            border: 1px solid;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        /* Sección títulos */
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-100);
+        }
+
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+            flex: 1;
+        }
+
+        .section-badge {
+            padding: 4px 12px;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Criterios de exclusión - lista moderna */
+        .exclusion-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .exclusion-item {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 16px;
+            transition: var(--transition);
+            cursor: pointer;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+
+        .exclusion-item:hover {
+            border-color: var(--danger);
+            background: #fef2f2;
+            transform: translateX(4px);
+        }
+
+        .exclusion-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--danger);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .exclusion-content {
+            flex: 1;
+        }
+
+        .exclusion-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .exclusion-description {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .exclusion-selected {
+            background: #fef2f2;
+            border-color: var(--danger);
+        }
+
+        /* Botón de continuar */
+        .continue-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .continue-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .continue-btn:active {
+            transform: translateY(0);
+        }
+
+        .continue-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Factores de riesgo - diseño card */
+        .factors-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .factor-card {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
+            padding: 20px;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .factor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+            transform: scaleY(0);
+            transition: var(--transition);
+        }
+
+        .factor-card:hover {
+            border-color: var(--primary-light);
+            background: white;
+            box-shadow: var(--shadow-md);
+            transform: translateX(4px);
+        }
+
+        .factor-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .factor-card.selected {
+            background: linear-gradient(135deg, #f8f4fb 0%, #f3ebf7 100%);
+            border-color: var(--primary-dark);
+            box-shadow: var(--shadow-md);
+        }
+
+        .factor-card.selected::before {
+            transform: scaleY(1);
+        }
+
+        .factor-card input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .factor-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .custom-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--gray-300);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+            background: white;
+        }
+
+        .factor-card.selected .custom-checkbox {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        .custom-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: var(--transition);
+        }
+
+        .factor-card.selected .custom-checkbox::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .factor-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            flex: 1;
+            font-size: 15px;
+        }
+
+        .factor-points {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .factor-description {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-top: 4px;
+            padding-left: 36px;
+        }
+
+        /* Resultado mejorado */
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            margin-top: 24px;
+            display: none;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-card.show {
+            display: block;
+        }
+
+        .result-score-display {
+            text-align: center;
+            padding: 40px 20px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+
+        .score-circle {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .score-number {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .risk-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .risk-probability {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        /* Colores por nivel de riesgo */
+        .result-low .score-circle {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 4px solid var(--success);
+        }
+
+        .result-low .score-number { color: var(--success); }
+        .result-low .result-score-display {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid var(--success);
+        }
+
+        .result-moderate .score-circle {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 4px solid var(--warning);
+        }
+
+        .result-moderate .score-number { color: var(--warning); }
+        .result-moderate .result-score-display {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 2px solid var(--warning);
+        }
+
+        .result-high .score-circle {
+            background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+            border: 4px solid var(--danger);
+        }
+
+        .result-high .score-number { color: var(--danger); }
+        .result-high .result-score-display {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 2px solid var(--danger);
+        }
+
+        /* Recomendación clínica */
+        .recommendation-box {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--gray-900);
+        }
+
+        .recommendation-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--gray-700);
+        }
+
+        /* Stats de validación */
+        .validation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .stat-card {
+            background: var(--gray-50);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .app-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 30px;
+            }
+
+            .tabs {
+                margin: 20px 15px 0;
+                padding: 6px;
+            }
+
+            .tab {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .tab-content {
+                padding: 20px 15px;
+            }
+
+            .score-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .score-number {
+                font-size: 48px;
+            }
+
+            .risk-title {
+                font-size: 24px;
+            }
+
+            .validation-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading state */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-icon">🏥</div>
+        <div class="splash-title">Evaluación EIP</div>
+        <div class="splash-subtitle">Cargando aplicación...</div>
+        <div class="splash-loader">
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+        </div>
+    </div>
+
+    <div class="container app-content">
+        <!-- App Card Principal -->
+        <div class="app-card">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-content">
+                    <div class="app-icon">🏥</div>
+                    <h1>Evaluación de Estadios Avanzados en EIP</h1>
+                    <p class="header-subtitle">Escala Predictiva Validada • AUC-ROC: 0.93</p>
+                </div>
+            </div>
+
+            <!-- Tabs de navegación -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('exclusion')" data-tab="exclusion">
+                    <span>⛔</span>
+                    <span>Criterios de Exclusión</span>
+                </button>
+                <button class="tab" onclick="switchTab('evaluation')" data-tab="evaluation" id="evaluationTab" disabled>
+                    <span>📋</span>
+                    <span>Evaluación</span>
+                </button>
+            </div>
+
+            <!-- Tab 1: Criterios de Exclusión -->
+            <div class="tab-content active" id="exclusion-content">
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div>
+                        <strong>Verificación inicial:</strong> Antes de aplicar la escala, confirme que la paciente NO presenta ninguno de los siguientes criterios de exclusión.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">⛔</div>
+                        <h2 class="section-title">Criterios de Exclusión</h2>
+                        <span class="section-badge" id="exclusionCount">0 seleccionados</span>
+                    </div>
+
+                    <div class="exclusion-list" id="exclusionList">
+                        <!-- Se generará dinámicamente -->
+                    </div>
+                </div>
+
+                <button class="continue-btn" id="continueBtn" onclick="proceedToEvaluation()">
+                    Continuar a Evaluación →
+                </button>
+            </div>
+
+            <!-- Tab 2: Evaluación de Factores -->
+            <div class="tab-content" id="evaluation-content">
+                <div class="alert alert-info">
+                    <span class="alert-icon">ℹ️</span>
+                    <div>
+                        Seleccione los factores de riesgo presentes. El sistema calculará automáticamente la puntuación y estratificación del riesgo.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">📋</div>
+                        <h2 class="section-title">Factores de Riesgo</h2>
+                        <span class="section-badge" id="factorCount">0/9</span>
+                    </div>
+
+                    <div class="factors-grid" id="factorsContainer">
+                        <!-- Se generará dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Resultado -->
+                <div class="result-card" id="resultCard">
+                    <div class="result-score-display" id="resultDisplay">
+                        <div class="score-circle">
+                            <div class="score-number" id="scoreNumber">0</div>
+                            <div class="score-label">PUNTOS</div>
+                        </div>
+                        <div class="risk-title" id="riskTitle"></div>
+                        <div class="risk-probability" id="riskProbability"></div>
+                    </div>
+
+                    <div class="recommendation-box">
+                        <div class="recommendation-header">
+                            <span id="recommendationIcon"></span>
+                            <span>Acción Clínica Recomendada</span>
+                        </div>
+                        <div class="recommendation-text" id="recommendationText"></div>
+                    </div>
+                </div>
+
+                <!-- Validación -->
+                <div class="section" style="margin-top: 40px;">
+                    <div class="section-header">
+                        <div class="section-icon">📊</div>
+                        <h2 class="section-title">Validación del Modelo</h2>
+                    </div>
+
+                    <div class="validation-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">0.93</div>
+                            <div class="stat-label">AUC-ROC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">91%</div>
+                            <div class="stat-label">Sensibilidad</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">89%</div>
+                            <div class="stat-label">Especificidad</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">95%</div>
+                            <div class="stat-label">VPN</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>⚠️ Herramienta de apoyo diagnóstico • El juicio clínico es indispensable</p>
+            <p style="margin-top: 8px; opacity: 0.9;">Estudio validado en población cubana • Para uso académico y profesional</p>
+        </div>
+    </div>
+
+    <script>
+        // Datos de la aplicación
+        const exclusionCriteria = [
+            {
+                id: 'pregnant',
+                title: 'Embarazo confirmado o sospecha de embarazo ectópico',
+                description: 'La EIP durante el embarazo requiere manejo especializado diferenciado'
+            },
+            {
+                id: 'postpartum',
+                title: 'Periodo postparto o postaborto reciente (< 6 semanas)',
+                description: 'Endometritis puerperal tiene protocolos de manejo específicos'
+            },
+            {
+                id: 'sepsis',
+                title: 'Sepsis severa o shock séptico al momento de la evaluación',
+                description: 'Requiere manejo urgente en UCI, no aplica estratificación ambulatoria'
+            },
+            {
+                id: 'peritonitis',
+                title: 'Signos de peritonitis generalizada o abdomen agudo quirúrgico',
+                description: 'Indicación quirúrgica de emergencia independiente de la escala'
+            },
+            {
+                id: 'immunocompromised',
+                title: 'Inmunosupresión severa (VIH con CD4<200, quimioterapia activa)',
+                description: 'Poblaciones con presentaciones atípicas no validadas en el estudio'
+            },
+            {
+                id: 'other_infection',
+                title: 'Otra infección intraabdominal concomitante (apendicitis, diverticulitis)',
+                description: 'Requiere diagnóstico diferencial y manejo específico de la condición'
+            },
+            {
+                id: 'recent_surgery',
+                title: 'Cirugía abdominal o pélvica en las últimas 4 semanas',
+                description: 'Complicaciones postquirúrgicas requieren evaluación quirúrgica primaria'
+            },
+            {
+                id: 'cancer',
+                title: 'Neoplasia pélvica conocida (ovario, endometrio, cérvix)',
+                description: 'Los hallazgos imagenológicos pueden confundir la estratificación'
+            }
+        ];
+
+        const riskFactors = [
+            {
+                id: 'us_complex',
+                title: 'Imagen compleja en US',
+                description: 'Hallazgo de absceso/hidrosálpinx',
+                points: 5
+            },
+            {
+                id: 'leucocytes',
+                title: 'Leucocitos >15.000/µL',
+                description: 'Recuento en ingreso',
+                points: 3
+            },
+            {
+                id: 'fever',
+                title: 'Fiebre ≥38.5°C',
+                description: 'Temperatura documentada al ingreso',
+                points: 3
+            },
+            {
+                id: 'vsg',
+                title: 'VSG >60 mm/h',
+                description: 'Valor en primera hora',
+                points: 3
+            },
+            {
+                id: 'age',
+                title: 'Edad ≤19 años',
+                description: 'Edad al diagnóstico',
+                points: 2
+            },
+            {
+                id: 'pain',
+                title: 'Dolor pélvico intenso',
+                description: 'Reportado en evaluación inicial',
+                points: 2
+            },
+            {
+                id: 'manipulation',
+                title: 'Manipulaciones uterinas recientes',
+                description: 'Legrados/inserción DIU últimos 3 meses',
+                points: 2
+            },
+            {
+                id: 'its',
+                title: 'ITS previas',
+                description: 'Historia de clamidia/gonorrea',
+                points: 1
+            },
+            {
+                id: 'tachycardia',
+                title: 'Frecuencia cardíaca >100 lpm',
+                description: 'Taquicardia en triaje',
+                points: 1
+            }
+        ];
+
+        // Estado
+        let selectedExclusions = new Set();
+        let selectedFactors = new Set();
+        let hasExclusions = false;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            renderExclusionCriteria();
+            renderRiskFactors();
+        });
+
+        // Renderizar criterios de exclusión
+        function renderExclusionCriteria() {
+            const container = document.getElementById('exclusionList');
+            container.innerHTML = exclusionCriteria.map(criterion => `
+                <div class="exclusion-item" id="excl-${criterion.id}" onclick="toggleExclusion('${criterion.id}')">
+                    <input type="checkbox" id="checkbox-excl-${criterion.id}">
+                    <div class="exclusion-content">
+                        <div class="exclusion-title">${criterion.title}</div>
+                        <div class="exclusion-description">${criterion.description}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Toggle exclusión
+        function toggleExclusion(id) {
+            const element = document.getElementById(`excl-${id}`);
+            const checkbox = document.getElementById(`checkbox-excl-${id}`);
+            
+            if (selectedExclusions.has(id)) {
+                selectedExclusions.delete(id);
+                element.classList.remove('exclusion-selected');
+                checkbox.checked = false;
+            } else {
+                selectedExclusions.add(id);
+                element.classList.add('exclusion-selected');
+                checkbox.checked = true;
+            }
+            
+            updateExclusionCount();
+            updateContinueButton();
+        }
+
+        // Actualizar contador de exclusiones
+        function updateExclusionCount() {
+            document.getElementById('exclusionCount').textContent = 
+                `${selectedExclusions.size} seleccionado${selectedExclusions.size !== 1 ? 's' : ''}`;
+        }
+
+        // Actualizar botón continuar
+        function updateContinueButton() {
+            const btn = document.getElementById('continueBtn');
+            hasExclusions = selectedExclusions.size > 0;
+            
+            if (hasExclusions) {
+                btn.textContent = '❌ Paciente NO Elegible para la Escala';
+                btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                btn.disabled = false;
+                btn.onclick = () => showExclusionWarning();
+            } else {
+                btn.textContent = 'Continuar a Evaluación →';
+                btn.style.background = 'var(--primary-gradient)';
+                btn.disabled = false;
+                btn.onclick = () => proceedToEvaluation();
+            }
+        }
+
+        // Mostrar advertencia de exclusión
+        function showExclusionWarning() {
+            alert('⚠️ PACIENTE NO ELEGIBLE\n\nLa paciente presenta criterios de exclusión. Esta escala no debe aplicarse.\n\nRecomendación: Evaluar según protocolos específicos para la condición identificada.');
+        }
+
+        // Proceder a evaluación
+        function proceedToEvaluation() {
+            if (hasExclusions) {
+                showExclusionWarning();
+                return;
+            }
+            
+            switchTab('evaluation');
+        }
+
+        // Cambiar tab
+        function switchTab(tabName) {
+            // Remover active de todos los tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Activar tab seleccionado
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}-content`).classList.add('active');
+            
+            // Habilitar tab de evaluación
+            if (tabName === 'evaluation' && !hasExclusions) {
+                document.getElementById('evaluationTab').disabled = false;
+            }
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Renderizar factores de riesgo
+        function renderRiskFactors() {
+            const container = document.getElementById('factorsContainer');
+            container.innerHTML = riskFactors.map(factor => `
+                <div class="factor-card" id="factor-${factor.id}" onclick="toggleFactor('${factor.id}')">
+                    <input type="checkbox" id="checkbox-${factor.id}">
+                    <div class="factor-header">
+                        <div class="custom-checkbox"></div>
+                        <div class="factor-title">${factor.title}</div>
+                        <div class="factor-points">${factor.points} pt${factor.points > 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="factor-description">${factor.description}</div>
+                </div>
+            `).join('');
+        }
+
+        // Toggle factor
+        function toggleFactor(id) {
+            const element = document.getElementById(`factor-${id}`);
+            const checkbox = document.getElementById(`checkbox-${id}`);
+            
+            if (selectedFactors.has(id)) {
+                selectedFactors.delete(id);
+                element.classList.remove('selected');
+                checkbox.checked = false;
+            } else {
+                selectedFactors.add(id);
+                element.classList.add('selected');
+                checkbox.checked = true;
+            }
+            
+            updateFactorCount();
+            calculateScore();
+        }
+
+        // Actualizar contador
+        function updateFactorCount() {
+            document.getElementById('factorCount').textContent = 
+                `${selectedFactors.size}/9`;
+        }
+
+        // Calcular puntaje
+        function calculateScore() {
+            let totalScore = 0;
+            
+            selectedFactors.forEach(factorId => {
+                const factor = riskFactors.find(f => f.id === factorId);
+                if (factor) totalScore += factor.points;
+            });
+
+            const resultCard = document.getElementById('resultCard');
+            const resultDisplay = document.getElementById('resultDisplay');
+            
+            if (selectedFactors.size > 0) {
+                resultCard.classList.add('show');
+                document.getElementById('scoreNumber').textContent = totalScore;
+
+                // Determinar categoría
+                let riskClass, riskTitle, riskProb, recIcon, recText;
+                
+                if (totalScore <= 7) {
+                    riskClass = 'result-low';
+                    riskTitle = '✅ Riesgo Bajo';
+                    riskProb = 'Probabilidad de Estadio III/IV: 8-12%';
+                    recIcon = '🏠';
+                    recText = 'Alta temprana con seguimiento ambulatorio. Antibioticoterapia oral y control en 24-48 horas. Vigilar signos de alarma.';
+                } else if (totalScore <= 12) {
+                    riskClass = 'result-moderate';
+                    riskTitle = '⚠️ Riesgo Moderado';
+                    riskProb = 'Probabilidad de Estadio III/IV: 35-60%';
+                    recIcon = '🏥';
+                    recText = 'Hospitalización inmediata. Iniciar terapia antibiótica intravenosa de amplio espectro. Monitorización de respuesta clínica cada 24 horas. Considerar evaluación quirúrgica si no hay mejoría en 48-72h.';
+                } else {
+                    riskClass = 'result-high';
+                    riskTitle = '🚨 Riesgo Alto';
+                    riskProb = 'Probabilidad de Estadio III/IV: 82-95%';
+                    recIcon = '⚕️';
+                    recText = 'URGENTE: Evaluación quirúrgica inmediata. Considerar laparoscopia/laparotomía. Monitorización en UCI o unidad de cuidados intermedios. Antibióticos IV de amplio espectro. Interconsulta con cirugía ginecológica.';
+                }
+
+                resultCard.className = `result-card show ${riskClass}`;
+                document.getElementById('riskTitle').textContent = riskTitle;
+                document.getElementById('riskProbability').textContent = riskProb;
+                document.getElementById('recommendationIcon').textContent = recIcon;
+                document.getElementById('recommendationText').textContent = recText;
+            } else {
+                resultCard.classList.remove('show');
+            }
+        }
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('✅ Service Worker registrado'))
+                    .catch(err => console.error('❌ Error SW:', err));
+            });
+        }
+    </script>
+</body>
+</html>

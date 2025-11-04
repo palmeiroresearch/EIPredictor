@@ -2,10 +2,10 @@
   "name": "Evaluación EIP - Estadios Avanzados",
   "short_name": "EIP Score",
   "description": "Escala predictiva para estadios avanzados en Enfermedad Inflamatoria Pélvica",
-  "start_url": "./index.html",
+  "start_url": "./index_v2.html",
   "display": "standalone",
-  "background_color": "#8b4789",
-  "theme_color": "#8b4789",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
   "orientation": "portrait",
   "icons": [
     {
@@ -24,5 +24,6 @@
   "categories": ["medical", "health", "education"],
   "lang": "es-ES",
   "scope": "./",
-  "screenshots": []
+  "screenshots": [],
+  "splash_pages": null
 }
